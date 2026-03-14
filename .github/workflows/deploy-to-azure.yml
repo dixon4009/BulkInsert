@@ -1,0 +1,47 @@
+name: Deploy to Azure Container Registry
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Log in to Azure Container Registry
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ secrets.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Build and push Docker image
+        run: |
+          docker build -f JobHandling.API/Dockerfile -t ${{ secrets.ACR_LOGIN_SERVER }}/jobhandling-api:${{ github.sha }} -t ${{ secrets.ACR_LOGIN_SERVER }}/jobhandling-api:latest .
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/jobhandling-api:${{ github.sha }}
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/jobhandling-api:latest
+
+      - name: Deploy to Azure Container Instances
+        uses: azure/aci-deploy@v1
+        with:
+          resource-group: ${{ secrets.AZURE_RESOURCE_GROUP }}
+          name: jobhandling-api
+          image: ${{ secrets.ACR_LOGIN_SERVER }}/jobhandling-api:latest
+          registry-login-server: ${{ secrets.ACR_LOGIN_SERVER }}
+          registry-username: ${{ secrets.ACR_USERNAME }}
+          registry-password: ${{ secrets.ACR_PASSWORD }}
+          environment-variables: |
+            ASPNETCORE_ENVIRONMENT=Production
+            Jwt__Key=${{ secrets.JWT_KEY }}
+          ports: 80 443

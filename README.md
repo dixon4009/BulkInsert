@@ -1,48 +1,47 @@
 ﻿# Job Handling API
 
-A robust, enterprise-grade .NET 8 API for asynchronous job processing with multiple execution strategies.
+A .NET 8 Web API for asynchronous job processing with multiple execution strategies.
 
-## ✨ Features
+------------            
 
 - **Multiple Job Processing Strategies**
-  - 🔹 **Bulk Processing**: Process all items in one operation
-  - 🔹 **Batch Processing**: Process items in configurable batch sizes
+  **Bulk Processing**: Process all items in one operation
+  **Batch Processing**: Process items in configurable batch sizes
 
 - **Robust Architecture**
-  - ✅ Clean Architecture (N-Layer)
-  - ✅ SOLID Principles
-  - ✅ Dependency Injection
-  - ✅ Repository Pattern
-  - ✅ Strategy Pattern
-  - ✅ Factory Pattern
+  - Clean Architecture (N-Layer)
+  - SOLID Principles
+  - Dependency Injection
+  - Repository Pattern
+  - Strategy Pattern
+  - Factory Pattern
 
 - **Security**
-  - 🔐 JWT Authentication
-  - 🔐 Bearer Token Authorization
-  - 🔐 Role-based Access Control
+  - JWT Authentication
+  - Bearer Token Authorization
+  - Role-based Access Control
 
 - **Observability**
-  - 📊 Comprehensive Logging (Serilog)
-  - 📊 Request/Response Middleware
-  - 📊 Real-time Job Status Tracking
+  - Comprehensive Logging (Serilog)
+  - Request/Response Middleware
+  - Real-time Job Status Tracking
 
 - **Testing**
-  - ✅ Unit Tests
-  - ✅ Integration Tests
-  - ✅ BDD Tests (SpecFlow-style)
-  - ✅ Mock-based Testing
+  - Unit Tests
+  - Integration Tests
+  - BDD Tests (SpecFlow-style)
+  - Mock-based Testing
 
 - **API Documentation**
-  - 📖 Swagger/OpenAPI
-  - 📖 Auto-generated from Code
-  - 📖 Interactive UI
+  - Swagger/OpenAPI
+  - Auto-generated from Code
+  - Interactive UI
 
 ---
 
-## 🔐 Authentication Endpoints
+## Design Decisions
 
-### POST `/api/auth/login`
-Authenticates a user and returns a JWT token.
+This section explains the architectural reasoning behind key choicesThis section explains the architectural reasoning behind key choicesThis section explains the architectural reasoning behind key choices.
 
 **Authorization:** None (Public endpoint)
 
@@ -161,13 +160,13 @@ Gets the processing logs of a job.
 
 ---
 
-## 📖 Complete API Reference
+## Complete API Reference
 
 ### Endpoint Summary
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| POST | `/api/auth/login` | ❌ No | Authenticate and get JWT token |
-| POST | `/api/jobs` | ✅ Yes | Start a new job |
-| GET | `/api/jobs/{id}/status` | ✅ Yes | Get job status |
-| GET | `/api/jobs/{id}/logs` | ✅ Yes | Get job processing logs |
+| POST | `/api/auth/login` | No | Authenticate and get JWT token |
+| POST | `/api/jobs` | Yes | Start a new job |
+| GET | `/api/jobs/{id}/status` | Yes | Get job status |
+| GET | `/api/jobs/{id}/logs` | Yes | Get job processing logs |

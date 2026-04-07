@@ -9,7 +9,7 @@ using Serilog.Context;
 
 namespace JobHandling.Application.Services
 {
-    public class JobService
+    public class JobService : IJobService
     {
         private readonly IJobRepository _repository;
         private readonly IJobProcessingQueue _processingQueue;

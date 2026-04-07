@@ -58,10 +58,7 @@ namespace JobHandling.API.Controllers
                         ExpiresIn = 3600
                     };
 
-
                     _logger.LogInformation("Login successful for user: {Username}", request.Username);
-                    _logger.LogDebug("Generated token: {Token}", token);
-
                     return Ok(response);
                 }
                 catch (Exception ex)

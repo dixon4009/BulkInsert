@@ -1,38 +1,42 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using JobHandling.Application.Services;
+using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 
-public class JwtTokenService
+namespace JobHandling.Application.Services
 {
-    private readonly IConfiguration _config;
-
-    public JwtTokenService(IConfiguration config)
+    public class JwtTokenService : IJwtTokenService
     {
-        _config = config;
-    }
+        private readonly IConfiguration _config;
 
-    public string GenerateToken(string username)
-    {
-        var key = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(_config["Jwt:Key"]));
-
-        var creds = new SigningCredentials(
-            key, SecurityAlgorithms.HmacSha256);
-
-        var claims = new[]
+        public JwtTokenService(IConfiguration config)
         {
-            new Claim(ClaimTypes.Name, username)
-        };
+            _config = config;
+        }
 
-        var token = new JwtSecurityToken(
-            issuer: _config["Jwt:Issuer"],
-            audience: _config["Jwt:Audience"],
-            claims: claims,
-            expires: DateTime.UtcNow.AddHours(1),
-            signingCredentials: creds);
+        public string GenerateToken(string username)
+        {
+            var key = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(_config["Jwt:Key"]));
 
-        return new JwtSecurityTokenHandler().WriteToken(token);
+            var creds = new SigningCredentials(
+                key, SecurityAlgorithms.HmacSha256);
+
+            var claims = new[]
+            {
+                new Claim(ClaimTypes.Name, username)
+            };
+
+            var token = new JwtSecurityToken(
+                issuer: _config["Jwt:Issuer"],
+                audience: _config["Jwt:Audience"],
+                claims: claims,
+                expires: DateTime.UtcNow.AddHours(1),
+                signingCredentials: creds);
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
+        }
     }
 }

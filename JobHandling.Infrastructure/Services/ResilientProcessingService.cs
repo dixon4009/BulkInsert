@@ -3,13 +3,18 @@ using Polly;
 using Polly.Retry;
 using Serilog;
 using Serilog.Context;
-
+using System.Net.Http;
 
 namespace JobHandling.Infrastructure.Services
 {
     /// <summary>
-    /// Decorator pattern: Wraps IItemProcessingService with resilience policy.
-    /// Implements automatic retry with exponential backoff for failed items.
+    /// Decorator that wraps an IItemProcessingService with resilience policies.
+    /// 
+    /// Design decision: Two retry triggers are configured intentionally —
+    ///   1. Result-based: retries when the inner service returns Success=false (graceful failures).
+    ///   2. Exception-based: retries on transient exceptions (network timeouts, HTTP 503, etc.).
+    /// This ensures the system is fault-tolerant against both logical failures and infrastructure errors,
+    /// which is critical for real-world services where processing calls involve I/O.
     /// </summary>
     public class ResilientProcessingService : IItemProcessingService
     {
@@ -21,25 +26,41 @@ namespace JobHandling.Infrastructure.Services
             _innerService = innerService;
 
             _retryPolicy = Policy<(bool Success, string Description)>
-                .HandleResult(r => !r.Success) // retry if failed
+                .HandleResult(r => !r.Success)
+                .Or<HttpRequestException>()
+                .Or<TimeoutException>()
+                .Or<InvalidOperationException>()
                 .WaitAndRetryAsync(
-                    retryCount: 3, // max 3 retries
-                    sleepDurationProvider: attempt => TimeSpan.FromMilliseconds(100 * Math.Pow(2, attempt)), // 200ms, 400ms, 800ms backoff
+                    retryCount: 3,
+                    sleepDurationProvider: attempt => TimeSpan.FromMilliseconds(100 * Math.Pow(2, attempt)),
                     onRetry: (outcome, timespan, retryCount, context) =>
                     {
                         var itemId = context.ContainsKey("ItemId") ? context["ItemId"] : "Unknown";
-                        
-                        Log.Warning(
-                            "Retry {RetryCount} for item {ItemId} after {DelayMilliseconds}ms. Failure: {Description}",
-                            retryCount,
-                            itemId,
-                            timespan.TotalMilliseconds,
-                            outcome.Result.Description);
+
+                        if (outcome.Exception != null)
+                        {
+                            Log.Warning(
+                                outcome.Exception,
+                                "Retry {RetryCount} for item {ItemId} after {DelayMilliseconds}ms due to exception: {ExceptionMessage}",
+                                retryCount,
+                                itemId,
+                                timespan.TotalMilliseconds,
+                                outcome.Exception.Message);
+                        }
+                        else
+                        {
+                            Log.Warning(
+                                "Retry {RetryCount} for item {ItemId} after {DelayMilliseconds}ms. Failure: {Description}",
+                                retryCount,
+                                itemId,
+                                timespan.TotalMilliseconds,
+                                outcome.Result.Description);
+                        }
                     });
         }
 
         /// <summary>
-        /// Processes an item with automatic retry on failure.
+        /// Processes an item with automatic retry on both result-based failures and exceptions.
         /// </summary>
         /// <param name="item">The item ID to process</param>
         /// <returns>Tuple containing success status and description</returns>
@@ -72,8 +93,8 @@ namespace JobHandling.Infrastructure.Services
                 }
                 catch (Exception ex)
                 {
-                    Log.Error(ex, "Unexpected error processing item {ItemId}", item);
-                    return (false, $"Unexpected error: {ex.Message}");
+                    Log.Error(ex, "Item {ItemId} failed after all retries with unhandled exception", item);
+                    return (false, $"Failed after retries: {ex.Message}");
                 }
             }
         }

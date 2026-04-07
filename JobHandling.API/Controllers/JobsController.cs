@@ -2,7 +2,6 @@
 using JobHandling.Application.DTOs;
 using JobHandling.Application.Services;
 using JobHandling.Domain.Entities;
-using JobHandling.Domain.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,10 +12,10 @@ namespace JobHandling.API.Controllers
     [Route("api/jobs")]
     public class JobsController : ControllerBase
     {
-        private readonly JobService _service;
+        private readonly IJobService _service;
         private readonly ILogger<JobsController> _logger;
 
-        public JobsController(JobService service, ILogger<JobsController> logger)
+        public JobsController(IJobService service, ILogger<JobsController> logger)
         {
             _service = service;
             _logger = logger;
@@ -39,34 +38,8 @@ namespace JobHandling.API.Controllers
                 request?.JobType,
                 request?.Items?.Count ?? 0);
 
-            try
-            {
-                var jobId = await _service.StartJob(request);
-                return Ok(jobId);
-            }
-            catch (JobHandlingException ex)
-            {
-                _logger.LogWarning(ex, "Validation error in StartJob");
-                return BadRequest(new ErrorResponse
-                {
-                    TraceId = HttpContext.TraceIdentifier,
-                    Message = ex.Message,
-                    ErrorType = nameof(JobHandlingException),
-                    StatusCode = StatusCodes.Status400BadRequest
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Unexpected error in StartJob");
-                return StatusCode(StatusCodes.Status500InternalServerError,
-                    new ErrorResponse
-                    {
-                        TraceId = HttpContext.TraceIdentifier,
-                        Message = "An internal error occurred",
-                        ErrorType = ex.GetType().Name,
-                        StatusCode = StatusCodes.Status500InternalServerError
-                    });
-            }
+            var jobId = await _service.StartJob(request);
+            return Ok(jobId);
         }
 
         /// <summary>
@@ -83,34 +56,8 @@ namespace JobHandling.API.Controllers
         {
             _logger.LogInformation("GetStatus endpoint called for job {JobId}", id);
 
-            try
-            {
-                var status = await _service.GetStatus(id);
-                return Ok(status);
-            }
-            catch (JobNotFoundException ex)
-            {
-                _logger.LogWarning(ex, "Job not found: {JobId}", id);
-                return NotFound(new ErrorResponse
-                {
-                    TraceId = HttpContext.TraceIdentifier,
-                    Message = ex.Message,
-                    ErrorType = nameof(JobNotFoundException),
-                    StatusCode = StatusCodes.Status404NotFound
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Unexpected error in GetStatus for job {JobId}", id);
-                return StatusCode(StatusCodes.Status500InternalServerError,
-                    new ErrorResponse
-                    {
-                        TraceId = HttpContext.TraceIdentifier,
-                        Message = "An internal error occurred",
-                        ErrorType = ex.GetType().Name,
-                        StatusCode = StatusCodes.Status500InternalServerError
-                    });
-            }
+            var status = await _service.GetStatus(id);
+            return Ok(status);
         }
 
         /// <summary>
@@ -127,34 +74,8 @@ namespace JobHandling.API.Controllers
         {
             _logger.LogInformation("GetLogs endpoint called for job {JobId}", id);
 
-            try
-            {
-                var logs = await _service.GetLogs(id);
-                return Ok(logs);
-            }
-            catch (JobNotFoundException ex)
-            {
-                _logger.LogWarning(ex, "Job not found: {JobId}", id);
-                return NotFound(new ErrorResponse
-                {
-                    TraceId = HttpContext.TraceIdentifier,
-                    Message = ex.Message,
-                    ErrorType = nameof(JobNotFoundException),
-                    StatusCode = StatusCodes.Status404NotFound
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Unexpected error in GetLogs for job {JobId}", id);
-                return StatusCode(StatusCodes.Status500InternalServerError,
-                    new ErrorResponse
-                    {
-                        TraceId = HttpContext.TraceIdentifier,
-                        Message = "An internal error occurred",
-                        ErrorType = ex.GetType().Name,
-                        StatusCode = StatusCodes.Status500InternalServerError
-                    });
-            }
+            var logs = await _service.GetLogs(id);
+            return Ok(logs);
         }
     }
 }

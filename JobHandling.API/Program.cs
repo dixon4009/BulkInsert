@@ -84,7 +84,7 @@ try
         };
     });
 
-    var jwtSettings = builder.Configuration.GetSection("Jwt");
+   var jwtSettings = builder.Configuration.GetSection("Jwt");
 
     builder.Services.AddAuthentication(options =>
     {

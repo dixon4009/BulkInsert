@@ -11,26 +11,30 @@ namespace JobHandling.Tests
 {
     public class JobServiceTests
     {
+        private readonly Mock<IJobRepository> _repoMock;
+        private readonly Mock<IJobProcessingQueue> _queueMock;
+        private readonly IJobService _service;
+
+        public JobServiceTests()
+        {
+            _repoMock = new Mock<IJobRepository>();
+            _repoMock.Setup(r => r.SaveAsync(It.IsAny<Job>())).Returns(Task.CompletedTask);
+            _queueMock = new Mock<IJobProcessingQueue>();
+            _service = new JobService(_repoMock.Object, _queueMock.Object);
+        }
+
         [Fact]
         public async Task StartJob_ShouldReturnJobId()
         {
             // Arrange
-            var items = new List<int> { 1, 2, 3 };
             var request = new StartJobRequest
             {
                 JobType = JobType.Bulk,
-                Items = items
+                Items = new List<int> { 1, 2, 3 }
             };
 
-            var repoMock = new Mock<IJobRepository>();
-            repoMock.Setup(r => r.SaveAsync(It.IsAny<Job>())).Returns(Task.CompletedTask);
-
-            var queueMock = new Mock<IJobProcessingQueue>();
-
-            var service = new JobService(repoMock.Object, queueMock.Object);
-
             // Act
-            var jobId = await service.StartJob(request);
+            var jobId = await _service.StartJob(request);
 
             // Assert
             jobId.Should().NotBeEmpty();
@@ -40,25 +44,17 @@ namespace JobHandling.Tests
         public async Task StartJob_ShouldSaveJobWithPendingStatus()
         {
             // Arrange
-            var items = new List<int> { 1, 2, 3 };
             var request = new StartJobRequest
             {
                 JobType = JobType.Bulk,
-                Items = items
+                Items = new List<int> { 1, 2, 3 }
             };
 
-            var repoMock = new Mock<IJobRepository>();
-            repoMock.Setup(r => r.SaveAsync(It.IsAny<Job>())).Returns(Task.CompletedTask);
-
-            var queueMock = new Mock<IJobProcessingQueue>();
-
-            var service = new JobService(repoMock.Object, queueMock.Object);
-
             // Act
-            var jobId = await service.StartJob(request);
+            await _service.StartJob(request);
 
             // Assert
-            repoMock.Verify(r => r.SaveAsync(It.Is<Job>(j =>
+            _repoMock.Verify(r => r.SaveAsync(It.Is<Job>(j =>
                 j.TotalItems == 3 &&
                 j.JobType == JobType.Bulk &&
                 j.Status == JobExecutionStatus.Pending)), Times.Once);
@@ -75,18 +71,11 @@ namespace JobHandling.Tests
                 Items = items
             };
 
-            var repoMock = new Mock<IJobRepository>();
-            repoMock.Setup(r => r.SaveAsync(It.IsAny<Job>())).Returns(Task.CompletedTask);
-
-            var queueMock = new Mock<IJobProcessingQueue>();
-
-            var service = new JobService(repoMock.Object, queueMock.Object);
-
             // Act
-            var jobId = await service.StartJob(request);
+            var jobId = await _service.StartJob(request);
 
             // Assert
-            queueMock.Verify(q => q.QueueJob(jobId, items, JobType.Bulk), Times.Once);
+            _queueMock.Verify(q => q.QueueJob(jobId, items, JobType.Bulk), Times.Once);
         }
 
         [Fact]
@@ -104,15 +93,10 @@ namespace JobHandling.Tests
                 Status = JobExecutionStatus.Running
             };
 
-            var repoMock = new Mock<IJobRepository>();
-            repoMock.Setup(r => r.GetAsync(jobId)).ReturnsAsync(job);
-
-            var queueMock = new Mock<IJobProcessingQueue>();
-
-            var service = new JobService(repoMock.Object, queueMock.Object);
+            _repoMock.Setup(r => r.GetAsync(jobId)).ReturnsAsync(job);
 
             // Act
-            var status = await service.GetStatus(jobId);
+            var status = await _service.GetStatus(jobId);
 
             // Assert
             status.TotalItems.Should().Be(3);
@@ -143,15 +127,10 @@ namespace JobHandling.Tests
                 Logs = logs
             };
 
-            var repoMock = new Mock<IJobRepository>();
-            repoMock.Setup(r => r.GetAsync(jobId)).ReturnsAsync(job);
-
-            var queueMock = new Mock<IJobProcessingQueue>();
-
-            var service = new JobService(repoMock.Object, queueMock.Object);
+            _repoMock.Setup(r => r.GetAsync(jobId)).ReturnsAsync(job);
 
             // Act
-            var result = await service.GetLogs(jobId);
+            var result = await _service.GetLogs(jobId);
 
             // Assert
             result.Should().HaveCount(2);
@@ -170,18 +149,11 @@ namespace JobHandling.Tests
                 Items = items
             };
 
-            var repoMock = new Mock<IJobRepository>();
-            repoMock.Setup(r => r.SaveAsync(It.IsAny<Job>())).Returns(Task.CompletedTask);
-
-            var queueMock = new Mock<IJobProcessingQueue>();
-
-            var service = new JobService(repoMock.Object, queueMock.Object);
-
             // Act
-            var jobId = await service.StartJob(request);
+            var jobId = await _service.StartJob(request);
 
             // Assert
-            queueMock.Verify(q => q.QueueJob(
+            _queueMock.Verify(q => q.QueueJob(
                 It.IsAny<Guid>(),
                 It.Is<List<int>>(l => l.Count == 2),
                 JobType.Bulk), Times.Once);
@@ -198,18 +170,11 @@ namespace JobHandling.Tests
                 Items = items
             };
 
-            var repoMock = new Mock<IJobRepository>();
-            repoMock.Setup(r => r.SaveAsync(It.IsAny<Job>())).Returns(Task.CompletedTask);
-
-            var queueMock = new Mock<IJobProcessingQueue>();
-
-            var service = new JobService(repoMock.Object, queueMock.Object);
-
             // Act
-            var jobId = await service.StartJob(request);
+            await _service.StartJob(request);
 
             // Assert
-            queueMock.Verify(q => q.QueueJob(
+            _queueMock.Verify(q => q.QueueJob(
                 It.IsAny<Guid>(),
                 It.Is<List<int>>(l => l.Count == 3),
                 JobType.Batch), Times.Once);
@@ -225,13 +190,8 @@ namespace JobHandling.Tests
                 Items = new List<int>()
             };
 
-            var repoMock = new Mock<IJobRepository>();
-            var queueMock = new Mock<IJobProcessingQueue>();
-
-            var service = new JobService(repoMock.Object, queueMock.Object);
-
             // Act & Assert
-            await service.Invoking(s => s.StartJob(request))
+            await _service.Invoking(s => s.StartJob(request))
                 .Should()
                 .ThrowAsync<JobHandlingException>();
         }
@@ -241,16 +201,11 @@ namespace JobHandling.Tests
         {
             // Arrange
             var jobId = Guid.NewGuid();
-            var repoMock = new Mock<IJobRepository>();
-            repoMock.Setup(r => r.GetAsync(jobId))
+            _repoMock.Setup(r => r.GetAsync(jobId))
                 .ThrowsAsync(new KeyNotFoundException());
 
-            var queueMock = new Mock<IJobProcessingQueue>();
-
-            var service = new JobService(repoMock.Object, queueMock.Object);
-
             // Act & Assert
-            await service.Invoking(s => s.GetStatus(jobId))
+            await _service.Invoking(s => s.GetStatus(jobId))
                 .Should()
                 .ThrowAsync<JobNotFoundException>();
         }
@@ -260,16 +215,11 @@ namespace JobHandling.Tests
         {
             // Arrange
             var jobId = Guid.NewGuid();
-            var repoMock = new Mock<IJobRepository>();
-            repoMock.Setup(r => r.GetAsync(jobId))
+            _repoMock.Setup(r => r.GetAsync(jobId))
                 .ThrowsAsync(new KeyNotFoundException());
 
-            var queueMock = new Mock<IJobProcessingQueue>();
-
-            var service = new JobService(repoMock.Object, queueMock.Object);
-
             // Act & Assert
-            await service.Invoking(s => s.GetLogs(jobId))
+            await _service.Invoking(s => s.GetLogs(jobId))
                 .Should()
                 .ThrowAsync<JobNotFoundException>();
         }
